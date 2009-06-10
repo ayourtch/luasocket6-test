@@ -1,0 +1,20 @@
+What's New
+
+This is just a bug-fix/update release.
+
+    * Fixed: manual links to home.html changed to index.html (Robert Hahn)
+    * Fixed: mime.unb64() returns empty string on results that start
+      with a null character (Robert Raschke)
+    * Fixed: HTTP now automatically redirecting on 303 and 307 (Jonathan Gray)
+    * Fixed: sleep(-1) could sleep forever wasting CPU. Now it
+      returns immediately (MPB);
+
+    * Improved: FTP commands are now sent in upper case to
+      help buggy servers (Anders Eurenius)
+    * Improved: known headers now sent in canonic
+      capitalization to help buggy servers (Joseph Stewart);
+    * Improved: Clarified tcp:receive() in the manual (MPB);  
+
+    * Fixed: multicast didn't work on Windows (Herbert Leuwer, Adrian Sietsma)
+    * Fixed: select() reports an error when called with more
+      sockets than FD_SETSIZE (Lorenzo Leonini)
