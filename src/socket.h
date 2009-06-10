@@ -71,4 +71,15 @@ const char *socket_ioerror(p_socket ps, int err);
 int socket_gethostbyaddr(const char *addr, socklen_t len, struct hostent **hp);
 int socket_gethostbyname(const char *addr, struct hostent **hp);
 
+void socket_freeaddrinfo(struct addrinfo *ai);
+int socket_getaddrinfo(const char *nodename,
+       const char *servname,
+       const struct addrinfo *hints,
+       struct addrinfo **res);
+
+
+int socket_getnameinfo(const struct sockaddr *sa, socklen_t salen,
+       char *node, socklen_t nodelen, char *service,
+       socklen_t servicelen, int flags);
+
 #endif /* SOCKET_H */

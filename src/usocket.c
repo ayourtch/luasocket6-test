@@ -338,6 +338,25 @@ int socket_gethostbyname(const char *addr, struct hostent **hp) {
     else return IO_UNKNOWN;
 }
 
+int socket_getaddrinfo(const char *nodename,
+       const char *servname,
+       const struct addrinfo *hints,
+       struct addrinfo **res) {
+    return getaddrinfo(nodename, servname, hints, res);
+}
+
+void socket_freeaddrinfo(struct addrinfo *ai) {
+    freeaddrinfo(ai);
+    return;
+}
+
+int socket_getnameinfo(const struct sockaddr *sa, socklen_t salen,
+       char *node, socklen_t nodelen, char *service,
+       socklen_t servicelen, int flags) {
+
+    return getnameinfo(sa, salen, node, nodelen, service, servicelen, flags);
+}
+
 /*-------------------------------------------------------------------------*\
 * Error translation functions
 * Make sure important error messages are standard
