@@ -141,7 +141,7 @@ static int meth_send(lua_State *L) {
 }
 
 /*-------------------------------------------------------------------------*\
-* Send data through unconnected udp socket
+* Send data through unconnected udp socket : TODO : make ipv6-friendly
 \*-------------------------------------------------------------------------*/
 static int meth_sendto(lua_State *L) {
     p_udp udp = (p_udp) auxiliar_checkclass(L, "udp{unconnected}", 1);
@@ -155,7 +155,7 @@ static int meth_sendto(lua_State *L) {
     memset(&addr, 0, sizeof(addr));
     if (!inet_aton(ip, &addr.sin_addr)) 
         luaL_argerror(L, 3, "invalid ip address");
-    addr.sin_family = AF_INET;
+    addr.sin_family = AF_INET6;
     addr.sin_port = htons(port);
     timeout_markstart(tm);
     err = socket_sendto(&udp->sock, data, count, &sent, 
@@ -281,6 +281,8 @@ static int meth_settimeout(lua_State *L) {
 * Turns a master udp object into a client object.
 \*-------------------------------------------------------------------------*/
 static int meth_setpeername(lua_State *L) {
+    const char *af_opts[] = {"AF_INET", "AF_INET6", "AF_UNSPEC"};
+    const char *def_af = "AF_UNSPEC";
     p_udp udp = (p_udp) auxiliar_checkgroup(L, "udp{any}", 1);
     p_timeout tm = &udp->tm;
     const char *address =  luaL_checkstring(L, 2);
@@ -288,7 +290,17 @@ static int meth_setpeername(lua_State *L) {
     unsigned short port = connecting ? 
         (unsigned short) luaL_checknumber(L, 3) : 
         (unsigned short) luaL_optnumber(L, 3, 0);
-    const char *err = inet_tryconnect(&udp->sock, address, port, tm);
+
+    short family;
+    const char *err;
+    switch(luaL_checkoption(L, 4, def_af, af_opts)) {
+        case 0 : family = AF_INET   ; break;
+        case 1 : family = AF_INET6  ; break;
+        case 2 : family = AF_UNSPEC ; break;
+        default: family = AF_UNSPEC ; break;
+    }
+
+    err = inet_tryconnect(&udp->sock, address, port, tm, family);
     if (err) {
         lua_pushnil(L);
         lua_pushstring(L, err);
@@ -315,10 +327,22 @@ static int meth_close(lua_State *L) {
 * Turns a master object into a server object
 \*-------------------------------------------------------------------------*/
 static int meth_setsockname(lua_State *L) {
+    const char *af_opts[] = {"AF_INET", "AF_INET6", "AF_UNSPEC"};
+    const char *def_af = "AF_UNSPEC";
     p_udp udp = (p_udp) auxiliar_checkclass(L, "udp{unconnected}", 1);
     const char *address =  luaL_checkstring(L, 2);
     unsigned short port = (unsigned short) luaL_checknumber(L, 3);
-    const char *err = inet_trybind(&udp->sock, address, port);
+    const char *err;
+    short family;
+
+    switch(luaL_checkoption(L, 4, def_af, af_opts)) {
+        case 0 : family = AF_INET   ; break;
+        case 1 : family = AF_INET6  ; break;
+        case 2 : family = AF_UNSPEC ; break;
+        default: family = AF_UNSPEC ; break;
+    }
+
+    err = inet_trybind(&udp->sock, address, port, family);
     if (err) {
         lua_pushnil(L);
         lua_pushstring(L, err);
@@ -336,8 +360,19 @@ static int meth_setsockname(lua_State *L) {
 \*-------------------------------------------------------------------------*/
 static int global_create(lua_State *L) {
     t_socket sock;
-    const char *err = inet_trycreate(&sock, SOCK_DGRAM);
+    const char *err;
+    const char *af_opts[] = {"AF_INET", "AF_INET6"};
+    const char *def_af = "AF_INET";
+    short family;
+
+    switch(luaL_checkoption(L, 4, def_af, af_opts)) {
+        case 0 : family = PF_INET   ; break;
+        case 1 : family = PF_INET6  ; break;
+        default: family = PF_INET   ; break;
+    }
+
     /* try to allocate a system socket */
+    err = inet_trycreate(&sock, SOCK_DGRAM, family);
     if (!err) { 
         /* allocate tcp object */
         p_udp udp = (p_udp) lua_newuserdata(L, sizeof(t_udp));
@@ -349,6 +384,7 @@ static int global_create(lua_State *L) {
         return 1;
     } else {
         lua_pushnil(L);
+        printf(err);
         lua_pushstring(L, err);
         return 2;
     }

@@ -24,11 +24,11 @@
 
 int inet_open(lua_State *L);
 
-const char *inet_trycreate(p_socket ps, int type);
+const char *inet_trycreate(p_socket ps, int type, short domain);
 const char *inet_tryconnect(p_socket ps, const char *address, 
-        unsigned short port, p_timeout tm);
+        unsigned short port, p_timeout tm, short family);
 const char *inet_trybind(p_socket ps, const char *address, 
-        unsigned short port);
+        unsigned short port, short family);
 
 int inet_meth_getpeername(lua_State *L, p_socket ps);
 int inet_meth_getsockname(lua_State *L, p_socket ps);

@@ -193,7 +193,21 @@ static int meth_bind(lua_State *L)
     p_tcp tcp = (p_tcp) auxiliar_checkclass(L, "tcp{master}", 1);
     const char *address =  luaL_checkstring(L, 2);
     unsigned short port = (unsigned short) luaL_checknumber(L, 3);
-    const char *err = inet_trybind(&tcp->sock, address, port);
+
+    const char *af_opts[] = {"AF_INET", "AF_INET6", "AF_UNSPEC"};
+    const char *def_af = "AF_UNSPEC";
+    const char *err;
+    short family;
+
+    switch(luaL_checkoption(L, 4, def_af, af_opts)) {
+        case 0  : family = AF_INET   ; break;
+        case 1  : family = AF_INET6  ; break;
+        case 2  : family = AF_UNSPEC ; break;
+        default : family = AF_UNSPEC ; break;
+    }
+
+
+    err = inet_trybind(&tcp->sock, address, port, family);
     if (err) {
         lua_pushnil(L);
         lua_pushstring(L, err);
@@ -208,11 +222,23 @@ static int meth_bind(lua_State *L)
 \*-------------------------------------------------------------------------*/
 static int meth_connect(lua_State *L)
 {
+    const char *af_opts[] = {"AF_INET", "AF_INET6", "AF_UNSPEC"};
+    const char *def_af = "AF_UNSPEC";
     p_tcp tcp = (p_tcp) auxiliar_checkgroup(L, "tcp{any}", 1);
     const char *address =  luaL_checkstring(L, 2);
     unsigned short port = (unsigned short) luaL_checknumber(L, 3);
+    short family;
+    const char *err;
     p_timeout tm = timeout_markstart(&tcp->tm);
-    const char *err = inet_tryconnect(&tcp->sock, address, port, tm);
+
+    switch(luaL_checkoption(L, 4, def_af, af_opts)) {
+        case 0 : family = AF_INET   ; break;
+        case 1 : family = AF_INET6  ; break;
+        case 2 : family = AF_UNSPEC ; break;
+        default: family = AF_UNSPEC ; break;
+    }
+
+    err = inet_tryconnect(&tcp->sock, address, port, tm, family);
     /* have to set the class even if it failed due to non-blocking connects */
     auxiliar_setclass(L, "tcp{client}", 1);
     if (err) {
@@ -315,9 +341,20 @@ static int meth_settimeout(lua_State *L)
 \*-------------------------------------------------------------------------*/
 static int global_create(lua_State *L)
 {
+    short family;
+    const char *af_opts[] = {"AF_INET", "AF_INET6"};
+    const char *def_af = "AF_INET";
+    const char *err;
     t_socket sock;
-    const char *err = inet_trycreate(&sock, SOCK_STREAM);
+
+    switch(luaL_checkoption(L, 1, def_af, af_opts)) {
+        case 0 : family = PF_INET   ; break;
+        case 1 : family = PF_INET6  ; break;
+        default: family = PF_INET ; break;
+    }
+
     /* try to allocate a system socket */
+    err = inet_trycreate(&sock, SOCK_STREAM, family);
     if (!err) { 
         /* allocate tcp object */
         p_tcp tcp = (p_tcp) lua_newuserdata(L, sizeof(t_tcp));

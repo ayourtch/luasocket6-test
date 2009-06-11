@@ -196,59 +196,91 @@ static void inet_pushresolved(lua_State *L, struct hostent *hp)
 }
 
 /*-------------------------------------------------------------------------*\
-* Tries to create a new inet socket
+* Tries to create a new inet(6) socket
 \*-------------------------------------------------------------------------*/
-const char *inet_trycreate(p_socket ps, int type) {
-    return socket_strerror(socket_create(ps, AF_INET, type, 0));
+const char *inet_trycreate(p_socket ps, int type, short domain) {
+    return socket_strerror(socket_create(ps, domain, type, 0));
 }
 
 /*-------------------------------------------------------------------------*\
 * Tries to connect to remote address (address, port)
 \*-------------------------------------------------------------------------*/
 const char *inet_tryconnect(p_socket ps, const char *address, 
-        unsigned short port, p_timeout tm)
+        unsigned short port, p_timeout tm, short family)
 {
-    struct sockaddr_in remote;
+
+   struct addrinfo *result = NULL, *rp = NULL;
+    struct addrinfo hints;
+    char portchar[12];
     int err;
-    memset(&remote, 0, sizeof(remote));
-    remote.sin_family = AF_INET;
-    remote.sin_port = htons(port);
-	if (strcmp(address, "*")) {
-        if (!inet_aton(address, &remote.sin_addr)) {
-            struct hostent *hp = NULL;
-            struct in_addr **addr;
-            err = socket_gethostbyname(address, &hp);
-            if (err != IO_DONE) return socket_hoststrerror(err);
-            addr = (struct in_addr **) hp->h_addr_list;
-            memcpy(&remote.sin_addr, *addr, sizeof(struct in_addr));
-        }
-    } else remote.sin_family = AF_UNSPEC;
-    err = socket_connect(ps, (SA *) &remote, sizeof(remote), tm);
-    return socket_strerror(err);
+
+    memset(&hints, 0, sizeof(hints));
+    memset(&portchar, 0, sizeof(portchar));
+    snprintf(portchar, 12, "%i", port);
+
+    hints.ai_family   = family;
+    hints.ai_protocol = 0;
+
+    hints.ai_flags = AI_ADDRCONFIG;
+
+    /* gai can take x.x.x.x, a 32-bit number, ipv6 format, or hostname */
+    err = socket_getaddrinfo(address, portchar, &hints, &result);
+    if (err != 0) { 
+        if (result) socket_freeaddrinfo(result);
+        return socket_gai_strerror(err);
+    };
+
+    /* Try connecting to the addresses one at a time - finish at the first successful one */
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        err = socket_connect(ps, rp->ai_addr, rp->ai_addrlen, tm);
+        if (err == 0) 
+            break;                  /* Success */
+    };
+
+    if (err != IO_DONE) socket_destroy(ps);
+    if (result) socket_freeaddrinfo(result);
+    return socket_strerror(err); 
 }
 
 /*-------------------------------------------------------------------------*\
-* Tries to bind socket to (address, port)
+* Tries to bind socket to (address, port, family); defaulting to AF_INET)
 \*-------------------------------------------------------------------------*/
-const char *inet_trybind(p_socket ps, const char *address, unsigned short port)
+const char *inet_trybind(p_socket ps, const char *address, unsigned short port, short family)
 {
-    struct sockaddr_in local;
-    int err;
-    memset(&local, 0, sizeof(local));
-    /* address is either wildcard or a valid ip address */
-    local.sin_addr.s_addr = htonl(INADDR_ANY);
-    local.sin_port = htons(port);
-    local.sin_family = AF_INET;
-    if (strcmp(address, "*") && !inet_aton(address, &local.sin_addr)) {
-        struct hostent *hp = NULL;
-        struct in_addr **addr;
-        err = socket_gethostbyname(address, &hp);
-        if (err != IO_DONE) return socket_hoststrerror(err);
-        addr = (struct in_addr **) hp->h_addr_list;
-        memcpy(&local.sin_addr, *addr, sizeof(struct in_addr));
-    }
-    err = socket_bind(ps, (SA *) &local, sizeof(local));
+    struct addrinfo *result = NULL, *rp = NULL;
+    struct addrinfo hints;
+    char portchar[12];
+    int err, wildcard;
+
+    memset(&hints, 0, sizeof(hints));
+    memset(&portchar, 0, sizeof(portchar));
+    snprintf(portchar, 12, "%i", port);
+
+    /* We want wildcard addresses if "*" is specified as the host */
+    wildcard = strcmp("*", address);
+
+    hints.ai_family   = family;
+    hints.ai_protocol = 0;
+
+    hints.ai_flags = (wildcard == 0 ? AI_PASSIVE : 0) | AI_NUMERICSERV | AI_ADDRCONFIG;
+
+    /* gai can take x.x.x.x, a 32-bit number, ipv6 format, or hostname */
+    err = socket_getaddrinfo((wildcard == 0 ? NULL : address), portchar, &hints, &result);
+    if (err != 0) { 
+        if (result) socket_freeaddrinfo(result);
+        return socket_gai_strerror(err);
+    };
+
+
+    /* Try binding to the addresses one at a time - finish at the first successful one */
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        err = socket_bind(ps, rp->ai_addr, rp->ai_addrlen);
+        if (err == 0) 
+            break;                  /* Success */
+    };
+
     if (err != IO_DONE) socket_destroy(ps);
+    if (result) socket_freeaddrinfo(result);
     return socket_strerror(err); 
 }
 
@@ -277,5 +309,3 @@ int inet_aton(const char *cp, struct in_addr *inp)
     return 1;
 }
 #endif
-
-

@@ -369,6 +369,10 @@ const char *socket_hoststrerror(int err) {
     }
 }
 
+const char *socket_gai_strerror(int err) {
+    return gai_strerror(err);
+}
+
 const char *socket_strerror(int err) {
     if (err <= 0) return io_strerror(err);
     switch (err) {

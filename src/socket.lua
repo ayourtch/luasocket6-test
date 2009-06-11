@@ -11,31 +11,34 @@ local base = _G
 local string = require("string")
 local math = require("math")
 local socket = require("socket.core")
+local peinr = print
 module("socket")
 
 -----------------------------------------------------------------------------
 -- Exported auxiliar functions
 -----------------------------------------------------------------------------
-function connect(address, port, laddress, lport)
-    local sock, err = socket.tcp()
+function connect(address, port, laddress, lport, ip_family)
+    ip_family = ip_family or "AF_INET"
+    local sock, err = socket.tcp(ip_family)
     if not sock then return nil, err end
     if laddress then
-        local res, err = sock:bind(laddress, lport, -1)
+        local res, err = sock:bind(laddress, lport, -1, ip_family)
         if not res then return nil, err end
     end
-    local res, err = sock:connect(address, port)
+    local res, err = sock:connect(address, port, nil, nil, ip_family)
     if not res then return nil, err end
     return sock
 end
 
-function bind(host, port, backlog)
-    local sock, err = socket.tcp()
+function bind(host, port, backlog, ip_family)
+    ip_family = ip_family or "AF_INET"
+    local sock, err = socket.tcp(ip_family)
     if not sock then return nil, err end
     sock:setoption("reuseaddr", true)
-    local res, err = sock:bind(host, port)
+    local res, err = sock:bind(host, port, ip_family)
     if not res then return nil, err end
     res, err = sock:listen(backlog)
-    if not res then return nil, err end
+    if not res then return nierr end
     return sock
 end
 

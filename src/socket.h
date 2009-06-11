@@ -60,6 +60,7 @@ int socket_accept(p_socket ps, p_socket pa, SA *addr,
 
 const char *socket_hoststrerror(int err);
 const char *socket_strerror(int err);
+const char *socket_gai_strerror(int err);
 
 /* these are perfect to use with the io abstraction module 
    and the buffered input module */
