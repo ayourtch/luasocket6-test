@@ -1,3 +1,9 @@
+This is the import of the Nick Thomas' patched version of luasocket, 
+for subsequent experiments.
+
+See http://code.google.com/p/lxmppd/issues/detail?id=68 for more info.
+
+-------
 This is the LuaSocket 2.0.1. It has been tested on WinXP, Mac OS X,
 and Linux.  Please use the Lua mailing list to report any bugs 
 (or "features") you encounter. 
