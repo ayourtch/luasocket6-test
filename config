@@ -17,7 +17,8 @@ UNIX_SO=unix.$(EXT)
 #
 #LUAINC=-I/usr/local/include/lua50
 #LUAINC=-I/usr/local/include/lua5.1
-LUAINC=-I/opt/local/include
+#LUAINC=-I/opt/local/include
+LUAINC=-I/usr/include/lua5.1
 
 #------
 # Compat-5.1 directory
@@ -30,8 +31,10 @@ LUAINC=-I/opt/local/include
 #
 #INSTALL_TOP_SHARE=/usr/local/share/lua/5.0
 #INSTALL_TOP_LIB=/usr/local/lib/lua/5.0
-INSTALL_TOP_SHARE=/opt/local/share/lua/5.1
-INSTALL_TOP_LIB=/opt/local/lib/lua/5.1
+# INSTALL_TOP_SHARE=/opt/local/share/lua/5.1
+# INSTALL_TOP_LIB=/opt/local/lib/lua/5.1
+INSTALL_TOP_SHARE=/usr/share/lua/5.1
+INSTALL_TOP_LIB=/usr/lib/lua/5.1
 
 INSTALL_DATA=cp
 INSTALL_EXEC=cp
@@ -42,9 +45,11 @@ INSTALL_EXEC=cp
 #
 CC=gcc
 DEF= -DLUASOCKET_DEBUG -DUNIX_HAS_SUN_LEN
-CFLAGS= $(LUAINC) $(COMPAT) $(DEF) -pedantic -Wall -O2 -fno-common
-LDFLAGS=-bundle -undefined dynamic_lookup
-LD=export MACOSX_DEPLOYMENT_TARGET="10.3"; gcc
+CFLAGS= $(LUAINC) $(COMPAT) $(DEF) -pedantic -Wall -O2 -fno-common -fPIC
+# LDFLAGS=-bundle -undefined dynamic_lookup
+# LD=export MACOSX_DEPLOYMENT_TARGET="10.3"; gcc
+LDFLAGS=-llua5.1
+LD=gcc -shared -Wl 
 
 #------
 # Compiler and linker settings
